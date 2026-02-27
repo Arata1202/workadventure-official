@@ -429,15 +429,7 @@ export const mediaStreamConstraintsStore = derived(
         ],
         set
     ) => {
-        // If a batch is in process, don't do anything.
-        if ($batchGetUserMediaStore) {
-            return;
-        }
-
-        let currentVideoConstraint: boolean | MediaTrackConstraints = $videoConstraintStore;
-        let currentAudioConstraint: boolean | MediaTrackConstraints = $audioConstraintStore;
-
-        // Shared conditions for disabling media
+        // [mediaStreamConstraints] Debug: entry
         const isInExternalService = $inExternalServiceStore === true;
         const isEnergySaving = $cameraEnergySavingStore === true && $enableCameraSceneVisibilityStore === false;
         const isUnavailableStatus =
@@ -451,6 +443,29 @@ export const mediaStreamConstraintsStore = derived(
         const shouldDisableCameraForPrivacy =
             $privacyShutdownStore === true && !localUserStore.getCameraPrivacySettings();
 
+        console.log("[mediaStreamConstraints] entry", {
+            $requestedMicrophoneState,
+            $requestedCameraState,
+            $privacyShutdownStore,
+            $availabilityStatusStore,
+            $batchGetUserMediaStore,
+            $inBackgroundSettingsStore,
+            isInExternalService,
+            isEnergySaving,
+            isUnavailableStatus,
+            shouldDisableMicrophoneForPrivacy,
+            shouldDisableCameraForPrivacy,
+        });
+
+        // If a batch is in process, don't do anything.
+        if ($batchGetUserMediaStore) {
+            console.log("[mediaStreamConstraints] early return: batch in process");
+            return;
+        }
+
+        let currentVideoConstraint: boolean | MediaTrackConstraints = $videoConstraintStore;
+        let currentAudioConstraint: boolean | MediaTrackConstraints = $audioConstraintStore;
+
         // Audio constraints always apply
         if (
             $requestedMicrophoneState === false ||
@@ -460,6 +475,7 @@ export const mediaStreamConstraintsStore = derived(
             isEnergySaving ||
             isUnavailableStatus
         ) {
+            console.log("[mediaStreamConstraints] disabling audio");
             currentAudioConstraint = false;
         }
 
@@ -473,6 +489,7 @@ export const mediaStreamConstraintsStore = derived(
                 isEnergySaving ||
                 isUnavailableStatus
             ) {
+                console.log("[mediaStreamConstraints] disabling video");
                 currentVideoConstraint = false;
             }
         }
@@ -491,6 +508,12 @@ export const mediaStreamConstraintsStore = derived(
                 previousComputedAudioConstraint = { ...previousComputedAudioConstraint };
             }
 
+            console.log("[mediaStreamConstraints] set", {
+                currentVideoConstraint,
+                currentAudioConstraint,
+                audioDisabled: currentAudioConstraint === false,
+                videoDisabled: currentVideoConstraint === false,
+            });
             set({
                 video: currentVideoConstraint,
                 audio: currentAudioConstraint,
